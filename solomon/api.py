@@ -5,6 +5,7 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import RedirectResponse
 
 from .http_client import HttpClient
 from .models import Source
