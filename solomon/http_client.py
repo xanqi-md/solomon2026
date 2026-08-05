@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import time
-from typing import Any
+from typing import Any, Self
 
 import httpx
+
 
 UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
