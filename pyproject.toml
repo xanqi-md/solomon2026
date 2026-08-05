@@ -36,4 +36,3 @@ extend-immutable-calls = [
     "typer.Argument",
     "typer.Option",
 ]
-
