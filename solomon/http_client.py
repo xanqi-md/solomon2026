@@ -76,7 +76,10 @@ class HttpClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self) -> "HttpClient":
+    from typing import Self
+
+
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *exc) -> None:
