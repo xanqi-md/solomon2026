@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict, field
-from datetime import datetime, timezone
-from enum import Enum
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from enum import StrEnum
 
 
-class Source(str, Enum):
+class Source(StrEnum):
     BIGWEB = "bigweb"
     YUYUTEI = "yuyutei"
-
 
 @dataclass(slots=True)
 class CardPrice:
@@ -25,7 +24,7 @@ class CardPrice:
     url: str | None = None
     image: str | None = None
     fetched_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )
 
     @property

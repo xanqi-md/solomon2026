@@ -18,3 +18,21 @@ browser = ["playwright>=1.44"]
 
 [project.scripts]
 solomon = "solomon.cli:app"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "PYI", "FURB"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Depends",
+    "typer.Argument",
+    "typer.Option",
+]

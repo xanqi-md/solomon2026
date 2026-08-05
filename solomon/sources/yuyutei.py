@@ -25,7 +25,7 @@ GAME_CODES: dict[str, str] = {
 PRICE_RE = re.compile(r"([\d,]+)\s*円")
 STOCK_NUM_RE = re.compile(r"在庫\s*[:：]\s*(\d+)\s*点")
 STOCK_SYM_RE = re.compile(r"在庫\s*[:：]\s*([◯○×✕])")
-RARITY_HEADING_RE = re.compile(r"^\s*(.+?)\s*Card\s*List\s*$", re.I)
+RARITY_HEADING_RE = re.compile(r"^\s*(.+?)\s*Card\s*List\s*$", re.IGNORECASE)
 ALT_RE = re.compile(r"^\s*(?P<id>\S+)\s+(?P<rarity>\S+)\s+(?P<name>.+?)\s*$")
 
 

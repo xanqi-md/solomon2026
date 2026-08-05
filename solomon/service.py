@@ -33,7 +33,7 @@ class PriceService:
 
         cards: list[CardPrice] = []
         errors: dict[str, str] = {}
-        for src, res in zip(targets, results):
+        for src, res in zip(targets, results, strict=True):
             if isinstance(res, Exception):
                 errors[src.value] = f"{type(res).__name__}: {res}"
             else:

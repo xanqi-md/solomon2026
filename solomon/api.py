@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
@@ -8,7 +10,6 @@ from .http_client import HttpClient
 from .models import Source
 from .service import PriceService
 
-import asyncio, sys
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -38,7 +39,8 @@ async def cards(
     try:
         srcs = [Source(s) for s in source] if source else None
     except ValueError:
-        raise HTTPException(400, "source は bigweb か yuyutei を指定してください")
+        raise HTTPException(400, "source は bigweb か yuyutei を指定してください") from None
+
 
     result, errors = await state["service"].search(
         name, game=game, sources=srcs, in_stock_only=in_stock

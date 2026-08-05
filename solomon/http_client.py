@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import time
-from typing import Any
+from typing import Any, Self
 
 import httpx
 
@@ -32,7 +32,6 @@ BROWSER_HEADERS = {
     "Connection": "keep-alive",
 }
 
-
 class TTLCache:
     def __init__(self, ttl: float = 300.0) -> None:
         self._ttl = ttl
@@ -50,7 +49,6 @@ class TTLCache:
     async def set(self, key: str, value: Any) -> None:
         async with self._lock:
             self._data[key] = (time.monotonic(), value)
-
 
 class HttpClient:
     """礼儀正しいクライアント: 同時接続を絞り、指数バックオフで再試行する。"""
@@ -76,7 +74,7 @@ class HttpClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def __aenter__(self) -> "HttpClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *exc) -> None:
