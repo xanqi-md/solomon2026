@@ -6,6 +6,7 @@ dist/
 .venv/
 venv/
 env/
+logs/
 
 # 秘密情報 — 絶対にコミットしない
 .env

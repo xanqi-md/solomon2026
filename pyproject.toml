@@ -3,7 +3,7 @@ name = "solomon2026"
 version = "2026.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "httpx>=0.27",
+    "httpx[http2]>=0.27",
     "brotli>=1.1",
     "beautifulsoup4>=4.12",
     "lxml>=5.2",
@@ -15,9 +15,11 @@ dependencies = [
 
 [project.optional-dependencies]
 browser = ["playwright>=1.44"]
+bot = ["discord.py>=2.7", "python-dotenv>=1.0"]
 
 [project.scripts]
 solomon = "solomon.cli:app"
+solomon-bot = "solomon.bot:main"
 
 [tool.ruff]
 target-version = "py311"
@@ -36,7 +38,3 @@ extend-immutable-calls = [
     "typer.Argument",
     "typer.Option",
 ]
-
-[project.scripts]
-solomon = "solomon.cli:app"
-solomon-bot = "solomon.bot:main"

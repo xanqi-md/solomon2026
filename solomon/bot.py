@@ -11,7 +11,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from .http_client import HttpClient
-from .models import CardPrice, Source
+from .models import Source
 from .service import PriceService
 from .sources.bigweb import GAME_IDS
 
@@ -55,45 +55,62 @@ class SolomonBot(commands.Bot):
 bot = SolomonBot()
 
 
-def build_embed(query: str, cards: list[CardPrice], errors: dict[str, str]) -> discord.Embed:
-    if not cards:
+def build_embed(outcome) -> discord.Embed:
+    if not outcome.matched:
         embed = discord.Embed(
-            title=f"「{query}」の検索結果",
-            description="該当する商品が見つかりませんでした。",
-            color=discord.Color.dark_grey(),
+            title=f"「{outcome.query}」は見つかりませんでした",
+            description=(
+                "この名前のカードは登録されていません。\n"
+                "カタカナや記号の表記をご確認ください。"
+            ),
+            color=discord.Color.red(),
         )
-    else:
-        cheapest = min((c.price for c in cards if c.price), default=None)
-        embed = discord.Embed(
-            title=f"「{query}」の販売価格",
-            description=f"{len(cards)} 件ヒット（安い順に最大 {MAX_FIELDS} 件を表示）",
-            color=discord.Color.blurple(),
-        )
-        for c in cards[:MAX_FIELDS]:
-            price = f"**{c.price:,} 円**" if c.price else "価格非公開 / 売切"
-            if c.price and c.price == cheapest:
-                price += " 🏆"
-            stock = "在庫あり" if c.stock is None else (
-                "在庫なし" if c.stock == 0 else f"残り {c.stock} 点"
+        if outcome.suggestions:
+            embed.add_field(
+                name="もしかして",
+                value="\n".join(f"・{s}" for s in outcome.suggestions)[:1024],
+                inline=False,
             )
-            shop = "BigWeb" if c.source is Source.BIGWEB else "遊々亭"
-            name = f"{c.card_id or '—'} / {c.rarity or '—'}"
-            value = f"{price} ・ {stock}\n[{shop}で見る]({c.url})"
-            embed.add_field(name=name[:256], value=value[:1024], inline=False)
+        return embed
 
-        thumb = next((c.image for c in cards if c.image), None)
-        if thumb:
-            embed.set_thumbnail(url=thumb)
+    cards = outcome.cards
+    cheapest = min((c.price for c in cards if c.price), default=None)
+    embed = discord.Embed(
+        title=f"「{outcome.query}」の販売価格",
+        description=f"{len(cards)} 件ヒット（安い順に最大 {MAX_FIELDS} 件を表示）",
+        color=discord.Color.blurple(),
+    )
+    for c in cards[:MAX_FIELDS]:
+        price = f"**{c.price:,} 円**" if c.price else "価格非公開 / 売切"
+        if c.price and c.price == cheapest:
+            price += " 🏆"
+        stock = "在庫あり" if c.stock is None else (
+            "在庫なし" if c.stock == 0 else f"残り {c.stock} 点"
+        )
+        shop = "BigWeb" if c.source == Source.BIGWEB else "遊々亭"
+        embed.add_field(
+            name=f"{c.card_id or '—'} / {c.rarity or '—'}"[:256],
+            value=f"{price} ・ {stock}\n[{shop}で見る]({c.url})"[:1024],
+            inline=False,
+        )
 
-    if errors:
+    thumb = next((c.image for c in cards if c.image), None)
+    if thumb:
+        embed.set_thumbnail(url=thumb)
+    if outcome.variants:
+        embed.add_field(
+            name="派生カード",
+            value=f"イラスト違い等が {len(outcome.variants)} 件あります（variants:true で表示）",
+            inline=False,
+        )
+    if outcome.errors:
         embed.add_field(
             name="⚠ 取得できなかったソース",
-            value="\n".join(f"`{k}`: {v[:80]}" for k, v in errors.items())[:1024],
+            value="\n".join(f"`{k}`: {v[:80]}" for k, v in outcome.errors.items())[:1024],
             inline=False,
         )
     embed.set_footer(text="出典: BigWeb / 遊々亭")
     return embed
-
 
 async def game_autocomplete(
     interaction: discord.Interaction, current: str
@@ -112,6 +129,9 @@ SEARCH_TIMEOUT = 45.0
     game="ゲームタイトル（既定: yugioh）",
     shop="検索対象の店舗",
     in_stock="在庫がある商品だけ表示する",
+    variants="イラスト違い等の派生カードも含める",
+
+    
 )
 @app_commands.autocomplete(game=game_autocomplete)
 @app_commands.choices(
@@ -127,7 +147,9 @@ async def price(
     game: str = "yugioh",
     shop: app_commands.Choice[str] | None = None,
     in_stock: bool = False,
+    variants: bool = False,
 ) -> None:
+
     # 何よりも先に defer する。ここが 3 秒を超えると即失敗する
     try:
         await interaction.response.defer(thinking=True)
@@ -145,8 +167,11 @@ async def price(
     sources = None if shop_value == "both" else [Source(shop_value)]
 
     try:
-        cards, errors = await asyncio.wait_for(
-            bot.service.search(name, game=game, sources=sources, in_stock_only=in_stock),
+        outcome = await asyncio.wait_for(
+            bot.service.search_exact(
+                name, game=game, sources=sources,
+                in_stock_only=in_stock, include_variants=variants,
+            ),
             timeout=SEARCH_TIMEOUT,
         )
     except TimeoutError:
@@ -160,8 +185,7 @@ async def price(
         await interaction.followup.send("検索中にエラーが発生しました。")
         return
 
-    log.info("検索完了: %d 件", len(cards))
-    await interaction.followup.send(embed=build_embed(name, cards, errors))
+    await interaction.followup.send(embed=build_embed(outcome))
 
 
 @price.error

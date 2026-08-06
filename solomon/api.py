@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Query
 
 from .http_client import HttpClient
 from .models import Source
-from .service import PriceService
+from .service import PriceService, SearchOutcome
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -35,23 +35,37 @@ async def cards(
     source: list[str] | None = Query(None, description="bigweb / yuyutei"),
     game: str = Query("yugioh"),
     in_stock: bool = Query(False),
+    exact: bool = Query(True, description="完全一致で検索する"),
+    variants: bool = Query(False, description="イラスト違い等も含める"),
 ):
     try:
         srcs = [Source(s) for s in source] if source else None
     except ValueError:
         raise HTTPException(400, "source は bigweb か yuyutei を指定してください") from None
 
+    service = state["service"]
+    if not exact:
+        cards, errors = await service.search(
+            name, game=game, sources=srcs, in_stock_only=in_stock
+        )
+        outcome = SearchOutcome(query=name, cards=cards, errors=errors)
+    else:
+        outcome = await service.search_exact(
+            name, game=game, sources=srcs,
+            in_stock_only=in_stock, include_variants=variants,
+        )
 
-    result, errors = await state["service"].search(
-        name, game=game, sources=srcs, in_stock_only=in_stock
-    )
-    cheapest = state["service"].cheapest_by_card(result)
     return {
-        "query": {"name": name, "game": game, "in_stock": in_stock},
-        "count": len(result),
-        "cheapest": {k: v.to_dict() for k, v in cheapest.items()},
-        "cards": [c.to_dict() for c in result],
-        "errors": errors,
+        "query": {"name": name, "game": game, "exact": exact, "in_stock": in_stock},
+        "matched": outcome.matched,
+        "suggestions": outcome.suggestions,
+        "count": len(outcome.cards),
+        "cheapest": {
+            k: v.to_dict() for k, v in service.cheapest_by_card(outcome.cards).items()
+        },
+        "cards": [c.to_dict() for c in outcome.cards],
+        "variant_count": len(outcome.variants),
+        "errors": outcome.errors,
     }
 
 
