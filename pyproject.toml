@@ -36,3 +36,7 @@ extend-immutable-calls = [
     "typer.Argument",
     "typer.Option",
 ]
+
+[project.scripts]
+solomon = "solomon.cli:app"
+solomon-bot = "solomon.bot:main"
